@@ -63,9 +63,12 @@ def start_callback(callback):
         print_categories(callback.message)
     elif callback.data == 'where_order':
         #callback.message.chat.id - такой же id, как и раньше, просто спереди пишется callback
-        bot.send_message(callback.message.chat.id, 'Ваш заказ был отдан на нужды голодающих африканских детей')
+        bot.send_message(callback.message.chat.id, 'Ваш заказ был отдан на нужды голодающих африканских детей!\n/start - начать сначала')
 
 
+@bot.message_handler(content_types=["text"])
+def what(message):
+    bot.send_message(message.chat.id, text='Я не понимаю \U0001F625 ')
 
 if __name__ == '__main__':
      bot.infinity_polling()
