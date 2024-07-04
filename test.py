@@ -46,7 +46,7 @@ def print_categories(message):
             message.chat.id - айдишник чата, из которого пришло сообщение, на которое надо ответить.
             message.text - текст присланного боту сообщения'''
 
-    bot.send_message(message.chat.id, 'В нашем магазине есть следующие категории товаров:')
+    bot.send_message(message.chat.id, text='В нашем магазине есть следующие категории товаров:')
     for i in row:
         bot.send_message(message.chat.id, i[0])
 
@@ -55,7 +55,7 @@ def print_categories(message):
 '''В этой функции бот примет сообщение, вставит его текст в своё сообщение и пришлёт назад пользователю'''
 @bot.message_handler(content_types=["text"])  #Это декоратор для того, чтобы бот принял сообщение и оттправил ответ
 def repeat_all_messages(message):
-    bot.send_message(message.chat.id, f'Вы написали: {message.text}')
+    bot.send_message(message.chat.id, text=f'Вы написали: {message.text}')
     # print(message.from_user.id)   тут я выводила id пользователя. Пригодится потом при оформлении заказа
 
 if __name__ == '__main__':
