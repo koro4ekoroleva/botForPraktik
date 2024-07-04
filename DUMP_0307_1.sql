@@ -100,7 +100,7 @@ CREATE TABLE `new_storage` (
   `clothes_id` int NOT NULL,
   `size_clothes` set('XXS','XS','S','M','L','XL','XXL','XXXL') DEFAULT NULL,
   `quantity` int DEFAULT NULL,
-  `products_id` int NOT NULL,
+  `products_id` varchar(50) NOT NULL,
   PRIMARY KEY (`clothes_id`),
   KEY `product_id_idx` (`products_id`),
   CONSTRAINT `product_id` FOREIGN KEY (`products_id`) REFERENCES `products` (`products_id`)
