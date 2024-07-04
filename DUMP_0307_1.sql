@@ -98,9 +98,12 @@ DROP TABLE IF EXISTS `new_storage`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `new_storage` (
   `clothes_id` int NOT NULL,
+  `size_clothes` set('XXS','XS','S','M','L','XL','XXL','XXXL') DEFAULT NULL,
   `quantity` int DEFAULT NULL,
   `products_id` int NOT NULL,
   PRIMARY KEY (`clothes_id`),
+  KEY `product_id_idx` (`products_id`),
+  CONSTRAINT `product_id` FOREIGN KEY (`products_id`) REFERENCES `products` (`products_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
