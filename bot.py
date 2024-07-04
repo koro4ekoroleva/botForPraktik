@@ -26,7 +26,7 @@ def connect(query):
         print(e)
     return results
 
-
+#VAleraa
 
 @bot.message_handler(commands=['start'])
 def start(message):
