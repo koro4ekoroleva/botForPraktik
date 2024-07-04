@@ -102,8 +102,6 @@ CREATE TABLE `new_storage` (
   `quantity` int DEFAULT NULL,
   `products_id` varchar(50) NOT NULL,
   PRIMARY KEY (`clothes_id`),
-  KEY `product_id_idx` (`products_id`),
-  CONSTRAINT `product_id` FOREIGN KEY (`products_id`) REFERENCES `products` (`products_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
