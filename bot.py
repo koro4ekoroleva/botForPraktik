@@ -73,95 +73,20 @@ def products_callback(callback):
              f'WHERE products.category_id = {category}')
     row = connect(query)
 
-
-    #     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-    #     product_before = telebot.types.InlineKeyboardButton(text='\U00002B05', callback_data='product_before')
-    #     cart = telebot.types.InlineKeyboardButton(text='В корзину\U0001F6D2', callback_data='cart')
-    #     product_after = telebot.types.InlineKeyboardButton(text='\U000027A1', callback_data='product_after')
-    #     markup.add(product_before, cart, product_after)
     viewed_product = 1
     pictures = list()
     for i in range(len(row)):
         pictures.append([row[i][0], row[i][5]])
-    text_for_message = ' '.join(row[viewed_product][1:4])
-    print(type(text_for_message))
-    print(text_for_message)
+    text_for_message = (f'{row[viewed_product][1]}\nПроизводитель: {row[viewed_product][2]}'
+                        f'\nСтрана производства: {row[viewed_product][3]}'
+                        f'\nСтрана производства: {row[viewed_product][3]}'
+                        f'\n\n*Цена: {row[viewed_product][4]} ₽*')
+
+
     photo_now = BytesIO(pictures[viewed_product][1])
-    bot.send_photo(callback.message.chat.id, caption=text_for_message, photo=photo_now)
+    bot.send_photo(callback.message.chat.id, caption=text_for_message, photo=photo_now, parse_mode='Markdown')
 
 
-
-# def print_categories(message):
-#     query = 'SELECT * FROM category'  #Запрос к бд на вывод названий всех категорий товаров
-#
-#     #В переменной row записывается результат работы запроса
-#     row = connect(query)
-#
-#     markup = telebot.types.InlineKeyboardMarkup(row_width=3)
-#     for i in row:
-#         #Каждый результат запроса заносим как кнопку
-#         markup.add(telebot.types.InlineKeyboardButton(text=i[1], callback_data=f'category{i[0]}'))
-#     bot.send_message(message.chat.id, text='Выберите категорию товара:', reply_markup=markup)
-#
-# # @bot.callback_query_handler(func=lambda callback: callback.data)
-# # def category_callback(callback):
-# #     print('Сработал колбэк category_callback ')
-# #     print(f'Selected {callback.data}')
-# #     if callback.data != 'order':
-# #         # bot.send_message(callback.message.chat.id, f'Вы выбрали {callback.data}')
-# #
-# #         products(callback.data)
-#
-#
-#
-#
-# # @bot.callback_query_handler(func=lambda callback: callback.data)  #callback.data возвращает идентификаторы кнопок
-# # def category_callback(callback):
-# #     print('Сработала category_callback')
-# #     if 'category' in callback.data:
-# #         print(f'Сработала категория {callback.data[8:]}')
-# #         products(callback.data)
-#
-#
-# @bot.callback_query_handler(func=lambda callback: callback.data)  #callback.data возвращает идентификаторы кнопок
-# def start_callback(callback):
-#     if callback.data == 'choice_wear':
-#         query = 'SELECT * FROM category'  # Запрос к бд на вывод названий всех категорий товаров
-#
-#         # В переменной row записывается результат работы запроса
-#         row = connect(query)
-#
-#         markup = telebot.types.InlineKeyboardMarkup(row_width=3)
-#         for i in row:
-#             # Каждый результат запроса заносим как кнопку
-#             markup.add(telebot.types.InlineKeyboardButton(text=i[1], callback_data=i[0]))
-#         bot.send_message(callback.message.chat.id, text='ало:', reply_markup=markup)
-#     elif callback.data == 'where_order':
-#         #callback.message.chat.id - такой же id, как и раньше, просто спереди пишется callback
-#         bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
-#                                                         '\n/start - начать сначала', callback_data='order')
-#     elif 'category' in callback.data:
-#         print(f'Сработала категория {callback.data[8:]}')
-#         products(callback.data)
-#
-#
-# @bot.callback_query_handler(func=lambda call: call.data == '0')
-# def products(call):
-#     mes = 'Товары по категории:' + call.data
-#     bot.send_message(call.message.chat.id, text=mes)
-#     query = f'SELECT * FROM products WHERE category_id = {call}'
-#     row = connect(query)
-#
-#     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-#     product_before = telebot.types.InlineKeyboardButton(text='\U00002B05', callback_data='product_before')
-#     cart = telebot.types.InlineKeyboardButton(text='В корзину\U0001F6D2', callback_data='cart')
-#     product_after = telebot.types.InlineKeyboardButton(text='\U000027A1', callback_data='product_after')
-#     markup.add(product_before, cart, product_after)
-#     for i in row:
-#         print(i)
-#         # bot.send_message(callback.message.chat.id, text=f'{i}', reply_markup=markup)
-#
-#
 @bot.message_handler(content_types=["text"])
 def what(message):
     bot.send_message(message.chat.id, text='Я не понимаю \U0001F625 ')
