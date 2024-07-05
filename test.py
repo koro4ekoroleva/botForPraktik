@@ -2,14 +2,14 @@ import telebot
 import mysql.connector as ms
 from mysql.connector import Error
 
-bot = telebot.TeleBot('6782288362:AAFdSdU_eK0k23dj3bj19i4HisT_2n6Upvw')
+bot = telebot.TeleBot('6782288362:AAGN7ZJxr8of45Ue6-8s0umzz9oMmXt46bE')
 
 #Подключение к бд
 
 def connect(query):
     results = []  #Сюда в конце функции занесутся результаты запроса
     try:
-        conn = ms.connect(user='root', password='23072003', host='127.0.0.1', database='shop_wear')
+        conn = ms.connect(user='root', password='23072003', host='127.0.0.1', database='shop_wear1')
 
         #Если смогли подключиться к бд, то в консоль выведет сообщение
         if not conn.is_connected():
