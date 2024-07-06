@@ -61,7 +61,7 @@ def category_callback(callback):
 @bot.callback_query_handler(func=lambda callback: callback.data == 'where_order')
 def where_order_callback(callback):
     bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
-                                                    '\n/start - начать сначала', callback_data='order')
+                                                    '\n/start - начать сначала')
 
 
 @bot.callback_query_handler(func=lambda callback: 'category' in callback.data)
@@ -79,13 +79,12 @@ def products_callback(callback, viewed_product = 0):
         pictures.append([row[i][0], row[i][5]])
     text_for_message = (f'{row[viewed_product][1]}\nПроизводитель: {row[viewed_product][2]}'
                         f'\nСтрана производства: {row[viewed_product][3]}'
-                        f'\nСтрана производства: {row[viewed_product][3]}'
                         f'\n\n*Цена: {row[viewed_product][4]} ₽*')
     photo_now = BytesIO(pictures[viewed_product][1])
 
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    markup = telebot.types.InlineKeyboardMarkup(row_width=3)
     product_before = telebot.types.InlineKeyboardButton(text='\U00002B05', callback_data='product_before')
-    cart = telebot.types.InlineKeyboardButton(text='В корзину\U0001F6D2', callback_data='cart')
+    cart = telebot.types.InlineKeyboardButton(text='В корзину\U0001F6D2\u2002', callback_data='cart')
     product_after = telebot.types.InlineKeyboardButton(text='\U000027A1', callback_data='product_after')
     markup.add(product_before, cart, product_after)
     bot.send_photo(callback.message.chat.id, caption=text_for_message, photo=photo_now, parse_mode='Markdown',
