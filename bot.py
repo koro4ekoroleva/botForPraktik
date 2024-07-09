@@ -5,8 +5,8 @@ import logging
 from io import BytesIO
 
 bot = telebot.TeleBot('7397593743:AAGJXf5jUKLO7EsoDTf2W8nVNmj68RbBnTs', skip_pending=True)
-logger = telebot.logger
-telebot.logger.setLevel(logging.DEBUG)
+# logger = telebot.logger
+# telebot.logger.setLevel(logging.DEBUG)
 
 #Подключение к бд
 
@@ -29,7 +29,6 @@ def connect(query):
         print(e)
     return results
 
-
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, text='Привет! Я помогу тебе с покупкой в нашем магазине!')
@@ -45,40 +44,73 @@ def start(message):
     bot.send_message(message.chat.id, text='Выберите дальнейшие действия', reply_markup=markup)  #reply_markup - кнопки
 
 
+@bot.callback_query_handler(func=lambda callback: callback.data =='where_order')
+def check_order(callback):
+    bot.send_message(callback.message.chat.id, text="Пожалуйста, введите номер вашего заказа:")
+    handle_order_id(callback)
+
+# Функция для обработки ввода номера заказа
+def handle_order_id(callback):
+    print(callback)
+
+    order_id = callback.message.from_user.text
+    user_id = callback.from_user.id
+    query = "SELECT ordersstate, userid FROM orders WHERE ordersid = ?"
+    row = connect(query, (orderid,))
+
+    if row:
+        if row[1] == user_id:
+            update.message.reply_text(f"Статус вашего заказа: {row[0]}")
+        else:
+            update.message.reply_text("Вы ввели некорректный номер заказа. Пожалуйста, попробуйте еще раз.")
+    else:
+        update.message.reply_text("Вы ввели некорректный номер заказа. Пожалуйста, попробуйте еще раз.")
+
 @bot.callback_query_handler(func=lambda callback: callback.data == 'choice_wear')  #callback.data возвращает идентификаторы кнопок
 def category_callback(callback):
     query = 'SELECT * FROM category'
 
     # В переменной row записывается результат работы запроса
     row = connect(query)
-
+    print(row)
     markup = telebot.types.InlineKeyboardMarkup(row_width=3)
     for i in row:
         # Каждый результат запроса заносим как кнопку
         markup.add(telebot.types.InlineKeyboardButton(text=i[1], callback_data=f'category{i[0]}'))
     bot.send_message(callback.message.chat.id, text='Выберите категорию товара:', reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda callback: callback.data == 'where_order')
-def where_order_callback(callback):
-    bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
-                                                    '\n/start - начать сначала')
+# @bot.callback_query_handler(func=lambda callback: callback.data == 'where_order')
+# def where_order_callback(callback):
+#     bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
+#                                                     '\n/start - начать сначала')
 
 viewed_product = 0
+category = 0
 
 @bot.callback_query_handler(func=lambda callback: 'category' in callback.data)
 def products_callback(callback):
-    global viewed_product, row
-    category = callback.data[8:]
-    print(viewed_product)
+    global viewed_product, row, category
+    print(callback, 'В products_callback')
+    try:
+        int(callback.data[8:])
+        category = callback.data[8:]
+    except:
+        pass
+    print(f'{viewed_product} - Это до ифов')
     if viewed_product == 0 :
         query = (f'SELECT products.products_id, products.product_name, maker.maker_name, maker.maker_country, '
                  f'products.price, products.picture FROM products JOIN maker ON products.maker_id = maker.maker_id '
                  f'WHERE products.category_id = {category}')
         row = connect(query)
+        print(f'{viewed_product} - сработал иф на ==0')
+        print(row[0][:4])
     elif viewed_product < 0:
         viewed_product = 0
-    elif viewed_product >= len(row):
+        print(f'{viewed_product} - сработал иф на <0')
+    elif viewed_product == len(row):
+        print(f'{viewed_product} - сработал иф на == лен')
         viewed_product = len(row) - 1
+    print(f'{viewed_product} - после ифов')
     pictures = list()
     for i in range(len(row)):
         pictures.append([row[i][0], row[i][5]])
@@ -101,9 +133,12 @@ def products_callback(callback):
 def products_callback_next(callback):
     global viewed_product
     if callback.data == 'product_before':
+        print(f'{viewed_product} - сработал product_before')
         viewed_product -= 1
     elif callback.data == 'product_after':
+        print(f'{viewed_product} - сработал product_after')
         viewed_product += 1
+    print(callback)
     products_callback(callback)
 
 @bot.message_handler(content_types=["text"])
@@ -111,4 +146,4 @@ def what(message):
     bot.send_message(message.chat.id, text='Я не понимаю \U0001F625 ')
 
 if __name__ == '__main__':
-     bot.infinity_polling()
+    bot.infinity_polling()
