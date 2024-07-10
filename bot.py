@@ -13,7 +13,7 @@ bot = telebot.TeleBot('7397593743:AAGJXf5jUKLO7EsoDTf2W8nVNmj68RbBnTs', skip_pen
 def connect(query):
     results = []
     try:
-        conn = ms.connect(user='root', password='23072003', host='127.0.0.1', database='shop_wear1')
+        conn = ms.connect(user='root', password='Ttt8642053', host='127.0.0.1', database='new_database')
 
         if not conn.is_connected():
             print('Connected to MySQL database')
@@ -141,9 +141,31 @@ def products_callback_next(callback):
     print(callback)
     products_callback(callback)
 
+    @bot.callback_query_handler(func=lambda callback: callback.data == 'cart')
+    def cart_callback(callback):
+        global clothes_id
+        products_id = row[viewed_product][0]
+        query = f'SELECT * FROM new_storage WHERE clothes_id DIV 100 = {products_id}'
+        clothes_id = connect(query)
+        markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+        if clothes_id:
+            #text_for_message = f"Вы выбрали продукт, для него доступны размеры: {clothes_id}"
+            for g in range(len(clothes_id)):
+                text_for_message =telebot.types.InlineKeyboardButton (f"Для размера {clothes_id[g][0]%100} доступно {clothes_id[g][1]}", callback_data=f'orderB{clothes_id[g]}')
+                markup.add(text_for_message)
+            bot.send_message(callback.message.chat.id,text="Выберите размер:", reply_markup = markup)
+
+        else:
+            bot.send_message(callback.message.chat.id, "Выбранный продукт недоступен")
+
+    @bot.callback_query_handler(func=lambda callback: 'orderB' in callback.data)
+    def check_order(callback):
+        bot.send_message(callback.message.chat.id, text="Дайте деняк:")
+        handle_order_id(callback)
+
 @bot.message_handler(content_types=["text"])
 def what(message):
     bot.send_message(message.chat.id, text='Я не понимаю \U0001F625 ')
 
 if __name__ == '__main__':
-    bot.infinity_polling()
+     bot.infinity_polling()
