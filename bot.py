@@ -5,15 +5,15 @@ import logging
 from io import BytesIO
 
 bot = telebot.TeleBot('7397593743:AAGJXf5jUKLO7EsoDTf2W8nVNmj68RbBnTs', skip_pending=True)
-# logger = telebot.logger
-# telebot.logger.setLevel(logging.DEBUG)
+logger = telebot.logger
+telebot.logger.setLevel(logging.DEBUG)
 
 #Подключение к бд
 
 def connect(query):
     results = []
     try:
-        conn = ms.connect(user='root', password='Ttt8642053', host='127.0.0.1', database='new_database')
+        conn = ms.connect(user='root', password='23072003', host='127.0.0.1', database='shop_wear1')
 
         if not conn.is_connected():
             print('Connected to MySQL database')
@@ -66,8 +66,13 @@ def handle_order_id(callback):
     else:
         update.message.reply_text("Вы ввели некорректный номер заказа. Пожалуйста, попробуйте еще раз.")
 
+viewed_product = 0
+category = 0
+
 @bot.callback_query_handler(func=lambda callback: callback.data == 'choice_wear')  #callback.data возвращает идентификаторы кнопок
 def category_callback(callback):
+    global viewed_product, category
+
     query = 'SELECT * FROM category'
 
     # В переменной row записывается результат работы запроса
@@ -77,6 +82,10 @@ def category_callback(callback):
     for i in row:
         # Каждый результат запроса заносим как кнопку
         markup.add(telebot.types.InlineKeyboardButton(text=i[1], callback_data=f'category{i[0]}'))
+
+    viewed_product = 0
+    category = 0
+
     bot.send_message(callback.message.chat.id, text='Выберите категорию товара:', reply_markup=markup)
 
 # @bot.callback_query_handler(func=lambda callback: callback.data == 'where_order')
@@ -84,33 +93,24 @@ def category_callback(callback):
 #     bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
 #                                                     '\n/start - начать сначала')
 
-viewed_product = 0
-category = 0
 
 @bot.callback_query_handler(func=lambda callback: 'category' in callback.data)
 def products_callback(callback):
     global viewed_product, row, category
-    print(callback, 'В products_callback')
     try:
         int(callback.data[8:])
         category = callback.data[8:]
     except:
         pass
-    print(f'{viewed_product} - Это до ифов')
     if viewed_product == 0 :
         query = (f'SELECT products.products_id, products.product_name, maker.maker_name, maker.maker_country, '
                  f'products.price, products.picture FROM products JOIN maker ON products.maker_id = maker.maker_id '
                  f'WHERE products.category_id = {category}')
         row = connect(query)
-        print(f'{viewed_product} - сработал иф на ==0')
-        print(row[0][:4])
     elif viewed_product < 0:
         viewed_product = 0
-        print(f'{viewed_product} - сработал иф на <0')
     elif viewed_product == len(row):
-        print(f'{viewed_product} - сработал иф на == лен')
         viewed_product = len(row) - 1
-    print(f'{viewed_product} - после ифов')
     pictures = list()
     for i in range(len(row)):
         pictures.append([row[i][0], row[i][5]])
@@ -133,35 +133,32 @@ def products_callback(callback):
 def products_callback_next(callback):
     global viewed_product
     if callback.data == 'product_before':
-        print(f'{viewed_product} - сработал product_before')
         viewed_product -= 1
     elif callback.data == 'product_after':
-        print(f'{viewed_product} - сработал product_after')
         viewed_product += 1
-    print(callback)
     products_callback(callback)
 
-    @bot.callback_query_handler(func=lambda callback: callback.data == 'cart')
-    def cart_callback(callback):
-        global clothes_id
-        products_id = row[viewed_product][0]
-        query = f'SELECT * FROM new_storage WHERE clothes_id DIV 100 = {products_id}'
-        clothes_id = connect(query)
-        markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-        if clothes_id:
-            #text_for_message = f"Вы выбрали продукт, для него доступны размеры: {clothes_id}"
-            for g in range(len(clothes_id)):
-                text_for_message =telebot.types.InlineKeyboardButton (f"Для размера {clothes_id[g][0]%100} доступно {clothes_id[g][1]}", callback_data=f'orderB{clothes_id[g]}')
-                markup.add(text_for_message)
-            bot.send_message(callback.message.chat.id,text="Выберите размер:", reply_markup = markup)
+@bot.callback_query_handler(func=lambda callback: callback.data == 'cart')
+def cart_callback(callback):
+    global clothes_id
+    products_id = row[viewed_product][0]
+    query = f'SELECT * FROM new_storage WHERE clothes_id DIV 100 = {products_id}'
+    clothes_id = connect(query)
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    if clothes_id:
+        #text_for_message = f"Вы выбрали продукт, для него доступны размеры: {clothes_id}"
+        for g in range(len(clothes_id)):
+            text_for_message =telebot.types.InlineKeyboardButton (f"Для размера {clothes_id[g][0]%100} доступно {clothes_id[g][1]}", callback_data=f'orderB{clothes_id[g]}')
+            markup.add(text_for_message)
+        bot.send_message(callback.message.chat.id,text="Выберите размер:", reply_markup = markup)
 
-        else:
-            bot.send_message(callback.message.chat.id, "Выбранный продукт недоступен")
+    else:
+        bot.send_message(callback.message.chat.id, "Выбранный продукт недоступен")
 
-    @bot.callback_query_handler(func=lambda callback: 'orderB' in callback.data)
-    def check_order(callback):
-        bot.send_message(callback.message.chat.id, text="Дайте деняк:")
-        handle_order_id(callback)
+@bot.callback_query_handler(func=lambda callback: 'orderB' in callback.data)
+def check_order(callback):
+    bot.send_message(callback.message.chat.id, text="Дайте деняк:")
+    handle_order_id(callback)
 
 @bot.message_handler(content_types=["text"])
 def what(message):
