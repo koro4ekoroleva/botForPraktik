@@ -3,10 +3,11 @@ import mysql.connector as ms
 from mysql.connector import Error
 import logging
 from io import BytesIO
+import re
 
 bot = telebot.TeleBot('7397593743:AAGJXf5jUKLO7EsoDTf2W8nVNmj68RbBnTs', skip_pending=True)
-logger = telebot.logger
-telebot.logger.setLevel(logging.DEBUG)
+# logger = telebot.logger
+# telebot.logger.setLevel(logging.DEBUG)
 
 #Подключение к бд
 
@@ -46,25 +47,42 @@ def start(message):
 
 @bot.callback_query_handler(func=lambda callback: callback.data =='where_order')
 def check_order(callback):
-    bot.send_message(callback.message.chat.id, text="Пожалуйста, введите номер вашего заказа:")
-    handle_order_id(callback)
+    bot.send_message(callback.message.chat.id, text="Пожалуйста, введите номер вашего заказа в формате 'Заказ 12345678'")
+    bot.register_next_step_handler(callback.message, handle_order_id)
 
 # Функция для обработки ввода номера заказа
-def handle_order_id(callback):
-    print(callback)
+@bot.message_handler(func=lambda message: message.text.lower().startswith('заказ'))
+def handle_order_id(message):
+    print(f'Вызвалась функция handle_order_id, {message}')
 
-    order_id = callback.message.from_user.text
-    user_id = callback.from_user.id
-    query = "SELECT ordersstate, userid FROM orders WHERE ordersid = ?"
-    row = connect(query, (orderid,))
+    order_id_match = re.search(r'заказ\s*[0-9]', message.text.lower())
+    if order_id_match:
+        order_id = message.text[-8:]
+        user_id = message.from_user.id
+        print(f'user_id = {user_id}, order_id = {order_id}')
 
-    if row:
-        if row[1] == user_id:
-            update.message.reply_text(f"Статус вашего заказа: {row[0]}")
+        # Замените функцию connect на ваш метод для выполнения SQL-запроса и получения результатов
+        query = f"SELECT * FROM orders WHERE orders_id = {order_id}"
+        rows = connect(query)  # Предполагается, что connect возвращает список строк
+
+        if rows:
+            row = rows[0]
+            if row[1] == user_id:
+                bot.send_message(chat_id=message.chat.id, text=f"Статус вашего заказа: {row[2]}")
+            else:
+                bot.send_message(chat_id=message.chat.id, text="Заказ был сделан с другого аккаунта. "
+                                                               "Попробуйте написать с него!")
         else:
-            update.message.reply_text("Вы ввели некорректный номер заказа. Пожалуйста, попробуйте еще раз.")
+            bot.send_message(chat_id=message.chat.id,
+                             text="Заказ не найден. Возможно, Вы ввели некорректный номер заказа. "
+                                  "Пожалуйста, попробуйте еще раз!")
     else:
-        update.message.reply_text("Вы ввели некорректный номер заказа. Пожалуйста, попробуйте еще раз.")
+        bot.send_message(chat_id=message.chat.id,
+                         text="Пожалуйста, введите корректный номер заказа в формате 'Заказ 12345678'.")
+
+    # else:
+    #     bot.send_message(callback.message.chat.id, text="Некорректный номер заказа, попробуйте еще раз!")
+    #     bot.register_next_step_handler(message=callback, callback=check_order)
 
 viewed_product = 0
 category = 0
@@ -72,9 +90,7 @@ category = 0
 @bot.callback_query_handler(func=lambda callback: callback.data == 'choice_wear')  #callback.data возвращает идентификаторы кнопок
 def category_callback(callback):
     global viewed_product, category
-
     query = 'SELECT * FROM category'
-
     # В переменной row записывается результат работы запроса
     row = connect(query)
     print(row)
