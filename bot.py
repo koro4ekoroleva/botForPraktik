@@ -4,10 +4,11 @@ from mysql.connector import Error
 import logging
 from io import BytesIO
 import re
+import random
 
 bot = telebot.TeleBot('7397593743:AAGJXf5jUKLO7EsoDTf2W8nVNmj68RbBnTs', skip_pending=True)
-# logger = telebot.logger
-# telebot.logger.setLevel(logging.DEBUG)
+logger = telebot.logger
+telebot.logger.setLevel(logging.DEBUG)
 
 #Подключение к бд
 
@@ -53,13 +54,10 @@ def check_order(callback):
 # Функция для обработки ввода номера заказа
 @bot.message_handler(func=lambda message: message.text.lower().startswith('заказ'))
 def handle_order_id(message):
-    print(f'Вызвалась функция handle_order_id, {message}')
-
     order_id_match = re.search(r'заказ\s*[0-9]', message.text.lower())
     if order_id_match:
         order_id = message.text[-8:]
         user_id = message.from_user.id
-        print(f'user_id = {user_id}, order_id = {order_id}')
 
         # Замените функцию connect на ваш метод для выполнения SQL-запроса и получения результатов
         query = f"SELECT * FROM orders WHERE orders_id = {order_id}"
@@ -80,9 +78,6 @@ def handle_order_id(message):
         bot.send_message(chat_id=message.chat.id,
                          text="Пожалуйста, введите корректный номер заказа в формате 'Заказ 12345678'.")
 
-    # else:
-    #     bot.send_message(callback.message.chat.id, text="Некорректный номер заказа, попробуйте еще раз!")
-    #     bot.register_next_step_handler(message=callback, callback=check_order)
 
 viewed_product = 0
 category = 0
@@ -93,7 +88,6 @@ def category_callback(callback):
     query = 'SELECT * FROM category'
     # В переменной row записывается результат работы запроса
     row = connect(query)
-    print(row)
     markup = telebot.types.InlineKeyboardMarkup(row_width=3)
     for i in row:
         # Каждый результат запроса заносим как кнопку
@@ -154,6 +148,7 @@ def products_callback_next(callback):
         viewed_product += 1
     products_callback(callback)
 
+products_id = 1
 @bot.callback_query_handler(func=lambda callback: callback.data == 'cart')
 def cart_callback(callback):
     global clothes_id
@@ -167,14 +162,42 @@ def cart_callback(callback):
             text_for_message =telebot.types.InlineKeyboardButton (f"Для размера {clothes_id[g][0]%100} доступно {clothes_id[g][1]}", callback_data=f'orderB{clothes_id[g]}')
             markup.add(text_for_message)
         bot.send_message(callback.message.chat.id,text="Выберите размер:", reply_markup = markup)
-
     else:
         bot.send_message(callback.message.chat.id, "Выбранный продукт недоступен")
 
+
 @bot.callback_query_handler(func=lambda callback: 'orderB' in callback.data)
 def check_order(callback):
-    bot.send_message(callback.message.chat.id, text="Дайте деняк:")
-    handle_order_id(callback)
+    order = callback.data[7:-1].split(', ')
+
+    query = f"SELECT buyer_id FROM buyers WHERE buyer_id = {callback.from_user.id}"
+    row = connect(query)
+    if len(row) == 0:
+        query = (f"INSERT INTO buyers (buyer_id, buyer_name, buyer_phone) "
+                 f"VALUES ('{callback.from_user.id}', '{callback.from_user.first_name}', '')")
+        row = connect(query)
+
+    order_id = random.randint(10000000, 99999999)
+    query = (
+        f"INSERT INTO orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
+        f"VALUES ('{order_id}', '{callback.from_user.id}', 'Зарегистрирован', "
+        f"'{int(order[0]) // 100}', '{int(order[0])}')"
+    )
+    try:
+        row = connect(query)
+    except:
+        while len(row) == 0:
+            order_id = random.randint(10000000, 99999999)
+            query = (
+                f"INSERT INTO orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
+                f"VALUES ('{order_id}', '{callback.from_user.id}', 'Зарегистрирован', "
+                f"'{int(order[0]) // 100}', '{int(order[0])}')"
+            )
+            row = connect(query)
+    print(query)
+    bot.send_message(callback.message.chat.id, text=f"Ваш заказ зарегистрирован под номером {order_id}.\n"
+                                                    f"Спасибо за заказ!")
+
 
 @bot.message_handler(content_types=["text"])
 def what(message):
