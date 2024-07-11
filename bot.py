@@ -78,13 +78,12 @@ def handle_order_id(message):
         bot.send_message(chat_id=message.chat.id,
                          text="Пожалуйста, введите корректный номер заказа в формате 'Заказ 12345678'.")
 
-
-viewed_product = 0
-category = 0
+users = {}
 
 @bot.callback_query_handler(func=lambda callback: callback.data == 'choice_wear')  #callback.data возвращает идентификаторы кнопок
 def category_callback(callback):
-    global viewed_product, category
+    global users
+
     query = 'SELECT * FROM category'
     # В переменной row записывается результат работы запроса
     row = connect(query)
@@ -93,37 +92,37 @@ def category_callback(callback):
         # Каждый результат запроса заносим как кнопку
         markup.add(telebot.types.InlineKeyboardButton(text=i[1], callback_data=f'category{i[0]}'))
 
-    viewed_product = 0
-    category = 0
-
+    users[callback.from_user.id]= [0, 0] #category, viewed_product. Теперь хранятся для каждого юзера (по id)
+    print(f'юзеры из category_callback: {category_callback}')
     bot.send_message(callback.message.chat.id, text='Выберите категорию товара:', reply_markup=markup)
-
-# @bot.callback_query_handler(func=lambda callback: callback.data == 'where_order')
-# def where_order_callback(callback):
-#     bot.send_message(callback.message.chat.id, text='Ваш заказ был отдан на нужды голодающих африканских детей!'
-#                                                     '\n/start - начать сначала')
 
 
 @bot.callback_query_handler(func=lambda callback: 'category' in callback.data)
 def products_callback(callback):
-    global viewed_product, row, category
+    global users, row
+    print(f'CALLBACK {callback.data}')
     try:
-        int(callback.data[8:])
-        category = callback.data[8:]
+        users[callback.from_user.id] = [int(callback.data[8:]), 0]
     except:
         pass
+    category = users.get(callback.from_user.id)[0]
+    viewed_product = users.get(callback.from_user.id)[1]
+    print(f'в products_callback {category, viewed_product}')
     if viewed_product == 0 :
         query = (f'SELECT products.products_id, products.product_name, maker.maker_name, maker.maker_country, '
                  f'products.price, products.picture FROM products JOIN maker ON products.maker_id = maker.maker_id '
                  f'WHERE products.category_id = {category}')
         row = connect(query)
     elif viewed_product < 0:
-        viewed_product = 0
+        users[callback.from_user.id] = [category, 0]
+        print(f'в viewed_product < 0 {users[callback.from_user.id]}')
     elif viewed_product == len(row):
-        viewed_product = len(row) - 1
+        users[callback.from_user.id] = [category, len(row) - 1]
+        print(f'в viewed_product == len(row {users[callback.from_user.id]}')
     pictures = list()
     for i in range(len(row)):
         pictures.append([row[i][0], row[i][5]])
+    viewed_product = users.get(callback.from_user.id)[1]
     text_for_message = (f'{row[viewed_product][1]}\nПроизводитель: {row[viewed_product][2]}'
                         f'\nСтрана производства: {row[viewed_product][3]}'
                         f'\n\n*Цена: {row[viewed_product][4]} ₽*')
@@ -141,17 +140,24 @@ def products_callback(callback):
 
 @bot.callback_query_handler(func=lambda callback: callback.data == 'product_before' or callback.data == 'product_after')
 def products_callback_next(callback):
-    global viewed_product
+    global users
     if callback.data == 'product_before':
-        viewed_product -= 1
+        before = users.get(callback.from_user.id)
+        print(before)
+        users[callback.from_user.id] = [before[0], before[1]-1]
     elif callback.data == 'product_after':
-        viewed_product += 1
+        before = users.get(callback.from_user.id)
+        print(before)
+        users[callback.from_user.id] = [before[0], before[1]+1]
+    print(f'ЮХУУУУ, {callback.from_user.id}')
+    print(f'ЮХУУУУ, {users.get(callback.from_user.id)}')
     products_callback(callback)
 
 products_id = 1
 @bot.callback_query_handler(func=lambda callback: callback.data == 'cart')
 def cart_callback(callback):
-    global clothes_id
+    global clothes_id, users
+    viewed_product = users.get(callback.from_user.id)[1]
     products_id = row[viewed_product][0]
     query = f'SELECT * FROM new_storage WHERE clothes_id DIV 100 = {products_id}'
     clothes_id = connect(query)
@@ -173,15 +179,22 @@ def check_order(callback):
     query = f"SELECT buyer_id FROM buyers WHERE buyer_id = {callback.from_user.id}"
     row = connect(query)
     if len(row) == 0:
-        query = (f"INSERT INTO buyers (buyer_id, buyer_name, buyer_phone) "
-                 f"VALUES ('{callback.from_user.id}', '{callback.from_user.first_name}', '')")
+        query = (f"INSERT INTO shop_wear1.buyers (buyer_id, buyer_name, buyer_phone) "
+                 f"VALUES ({callback.from_user.id}, '{callback.from_user.first_name}', '')")
         row = connect(query)
-
+    product_id = int(order[0]) // 100
+    size_id = int(order[0])
+    # Проверка наличия product_id в таблице products
+    query = f"SELECT products_id FROM products WHERE products_id = {product_id}"
+    product_exists = connect(query)
+    if len(product_exists) == 0:
+        bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                              text="Ошибка: выбранный продукт не существует.")
+        return
     order_id = random.randint(10000000, 99999999)
     query = (
-        f"INSERT INTO orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
-        f"VALUES ('{order_id}', '{callback.from_user.id}', 'Зарегистрирован', "
-        f"'{int(order[0]) // 100}', '{int(order[0])}')"
+        f"INSERT INTO shop_wear1.orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
+        f"VALUES ({order_id}, {callback.from_user.id}, 'Зарегистрирован', {product_id}, {size_id})"
     )
     try:
         row = connect(query)
@@ -189,14 +202,14 @@ def check_order(callback):
         while len(row) == 0:
             order_id = random.randint(10000000, 99999999)
             query = (
-                f"INSERT INTO orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
-                f"VALUES ('{order_id}', '{callback.from_user.id}', 'Зарегистрирован', "
-                f"'{int(order[0]) // 100}', '{int(order[0])}')"
+                f"INSERT INTO shop_wear1.orders (orders_id, buyers_id, orders_state, products_id, sizes_id) "
+                f"VALUES ({order_id}, {callback.from_user.id}, 'Зарегистрирован', {product_id}, {size_id})"
             )
             row = connect(query)
     print(query)
-    bot.send_message(callback.message.chat.id, text=f"Ваш заказ зарегистрирован под номером {order_id}.\n"
-                                                    f"Спасибо за заказ!")
+    bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                          text=f"Ваш заказ зарегистрирован под номером {order_id}.\nСпасибо за заказ!")
+    users[callback.from_user.id] = [0, 0]
 
 
 @bot.message_handler(content_types=["text"])
